@@ -23,7 +23,12 @@ jobs:
       - name: Build packages
         # Downloads the UE4SS build pinned in packaging/ue4ss.lock.json and checks its SHA-256.
         # If upstream has replaced that build, this step fails: update the lock file after testing a new build.
-        run: python3 tools/build_release.py --version "${GITHUB_REF_NAME}"
+        run: |
+          python3 tools/build_release.py --version "${GITHUB_REF_NAME}"
+          # Fixed-name copies so .../releases/latest/download/<name> always points to the newest release.
+          v="${GITHUB_REF_NAME#v}"
+          cp "dist/QDQuickSave-${v}-with-UE4SS.zip" dist/QDQuickSave-with-UE4SS.zip
+          cp "dist/QDQuickSave-${v}.zip" dist/QDQuickSave.zip
 
       - name: Publish release
         env:

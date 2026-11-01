@@ -14,8 +14,10 @@ saves are never touched.**
 
 ## Quick start (Windows)
 
-1. Go to **[Releases](https://github.com/derlocke-ng/queens-maiden-save-mod/releases)** and download
-   **`QDQuickSave-<version>-with-UE4SS.zip`**.
+New to mods? Follow the short [Windows tutorial](docs/INSTALL-WINDOWS.md).
+
+1. Download **[QDQuickSave-with-UE4SS.zip](https://github.com/derlocke-ng/queens-maiden-save-mod/releases/latest/download/QDQuickSave-with-UE4SS.zip)**
+   (always the newest version; all versions are on the [Releases](https://github.com/derlocke-ng/queens-maiden-save-mod/releases) page).
 2. Open the game folder: in Steam, right-click *Queens Domain* → **Manage** → **Browse local files**.
    It is the folder that contains `QueensDomain.exe`.
 3. Extract the zip **into that folder** (keep the folder structure). Done – start the game.

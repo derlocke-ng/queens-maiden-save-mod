@@ -1,9 +1,13 @@
 name: Release
 
-# Push a tag like v1.0.0 to build both zips and publish them as a GitHub Release.
+# Change the VERSION file (e.g. 1.0.0 -> 1.0.1) and push to main: this workflow builds both zips, creates the tag
+# v<VERSION> and publishes the GitHub Release. Nothing happens if that tag already exists.
+# Tags created here use the workflow token, which by design does not trigger further workflow runs.
 on:
   push:
-    tags: ["v*"]
+    branches: [main]
+    paths: [VERSION]
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -14,33 +18,57 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Read version
+        id: version
+        run: |
+          v="$(tr -d ' \r\n' < VERSION)"
+          if ! printf '%s' "$v" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?$'; then
+            echo "VERSION must look like 1.2.3, got '$v'" >&2
+            exit 1
+          fi
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v$v" >/dev/null; then
+            echo "Tag v$v already exists; nothing to release."
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Install Lua compiler
+        if: steps.version.outputs.exists == 'false'
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends lua5.4
 
       - name: Lua syntax
+        if: steps.version.outputs.exists == 'false'
         run: for f in mods/*/Scripts/main.lua; do luac5.4 -p "$f"; done
 
       - name: Build packages
+        if: steps.version.outputs.exists == 'false'
         # Downloads the UE4SS build pinned in packaging/ue4ss.lock.json and checks its SHA-256.
         # If upstream has replaced that build, this step fails: update the lock file after testing a new build.
+        env:
+          V: ${{ steps.version.outputs.version }}
         run: |
-          python3 tools/build_release.py --version "${GITHUB_REF_NAME}"
+          python3 tools/build_release.py --version "$V"
           # Fixed-name copies so .../releases/latest/download/<name> always points to the newest release.
-          v="${GITHUB_REF_NAME#v}"
-          cp "dist/QDQuickSave-${v}-with-UE4SS.zip" dist/QDQuickSave-with-UE4SS.zip
-          cp "dist/QDQuickSave-${v}.zip" dist/QDQuickSave.zip
+          cp "dist/QDQuickSave-${V}-with-UE4SS.zip" dist/QDQuickSave-with-UE4SS.zip
+          cp "dist/QDQuickSave-${V}.zip" dist/QDQuickSave.zip
 
       - name: Publish release
+        if: steps.version.outputs.exists == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
+          V: ${{ steps.version.outputs.version }}
         run: |
           cat > notes.md <<'EOF'
           **Which file do I need?**
-          - New to mods? Download **QDQuickSave-…-with-UE4SS.zip** (includes UE4SS, the mod loader).
-          - Already using UE4SS? Download **QDQuickSave-….zip** (the mod only).
+          - New to mods? Download **QDQuickSave-with-UE4SS.zip** (includes UE4SS, the mod loader).
+          - Already using UE4SS? Download **QDQuickSave.zip** (the mod only).
 
-          Extract into the game folder (the one with `QueensDomain.exe`). Full instructions, including the one extra step
-          for Linux / Steam Deck: see the [README](https://github.com/${{ github.repository }}#readme).
+          Extract into the game folder (the one with `QueensDomain.exe`). Linux / Steam Deck need one extra step:
+          see the [README](https://github.com/${{ github.repository }}#readme).
+
+          The versioned files are identical copies of the two above.
           EOF
-          gh release create "${GITHUB_REF_NAME}" dist/*.zip dist/SHA256SUMS.txt \
-            --title "QDQuickSave ${GITHUB_REF_NAME}" --notes-file notes.md
+          gh release create "v${V}" dist/*.zip dist/SHA256SUMS.txt \
+            --target "${GITHUB_SHA}" --title "QDQuickSave v${V}" --notes-file notes.md

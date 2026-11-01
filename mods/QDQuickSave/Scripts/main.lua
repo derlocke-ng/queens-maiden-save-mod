@@ -1,4 +1,4 @@
--- QDQuickSave v10 for Queens Domain (UE 4.27, UE4SS experimental).
+-- QDQuickSave for Queens Domain (UE 4.27, UE4SS experimental).
 --
 -- Built on the game's own suspend-save system (the save it writes every 120 s for crash recovery):
 --   F5 (in game)       Only once the slot has a monolith save. Ask the game to write its suspend save now
@@ -628,4 +628,7 @@ RegisterKeyBind(Key.F5, quickSave)
 RegisterKeyBind(Key.F9, quickLoad)
 maintainHooks()
 
-log("v10 loaded: F5 quicksave, F9 (twice) quickload in game or on the death screen, F9 on the title for the highlighted slot")
+-- Release builds add Mods/QDQuickSave/VERSION.txt; UE4SS's working directory is its ue4ss folder.
+local releaseVersion = (readFile("Mods/QDQuickSave/VERSION.txt") or ""):match("QDQuickSave%s+(%S+)") or "dev (r10)"
+log("QDQuickSave " .. releaseVersion .. " loaded: F5 quicksave, F9 (twice) quickload in game or on the death screen,"
+    .. " F9 on the title for the highlighted slot")

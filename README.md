@@ -14,8 +14,6 @@ saves are never touched.**
 
 ## Quick start (Windows)
 
-New to mods? Follow the short [Windows tutorial](docs/INSTALL-WINDOWS.md).
-
 1. Download **[QDQuickSave-with-UE4SS.zip](https://github.com/derlocke-ng/queens-maiden-save-mod/releases/latest/download/QDQuickSave-with-UE4SS.zip)**
    (always the newest version; all versions are on the [Releases](https://github.com/derlocke-ng/queens-maiden-save-mod/releases) page).
 2. Open the game folder: in Steam, right-click *Queens Domain* → **Manage** → **Browse local files**.
@@ -113,9 +111,11 @@ Download **`QDQuickSave-<version>.zip`** (mod only) and extract it into the game
 ## For developers
 
 ```
-python3 tools/build_release.py --version 1.2.3            # builds dist/*.zip
-git tag v1.2.3 && git push origin v1.2.3                 # CI publishes a GitHub Release
+python3 tools/build_release.py           # builds dist/*.zip for the version in VERSION
 ```
+
+**Releasing:** change the version in `VERSION` (e.g. `1.0.0` → `1.0.1`) and push to `main`. The *Release* workflow
+then builds both zips, creates the tag `v1.0.1` and publishes the GitHub Release (nothing happens if the tag exists).
 
 - Mod source: `mods/QDQuickSave/Scripts/main.lua`. `mods/QuickSaveProbe` is a logging-only research tool (not shipped).
 - The bundled UE4SS build is pinned in `packaging/ue4ss.lock.json` (URL + SHA-256).

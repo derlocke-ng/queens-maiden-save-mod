@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """Build the QDQuickSave release zips into dist/.
 
-  build_release.py --version 1.0.0                 mod-only zip and the -with-UE4SS bundle
-  build_release.py --version 1.0.0 --mod-only      mod-only zip
-  build_release.py --version 1.0.0 --ue4ss-zip PATH   use a local copy of the pinned UE4SS zip
+  build_release.py                                 version from the VERSION file; mod-only zip and -with-UE4SS bundle
+  build_release.py --version 1.0.0                 explicit version
+  build_release.py --mod-only                      mod-only zip
+  build_release.py --ue4ss-zip PATH                use a local copy of the pinned UE4SS zip
 
 Both zips are laid out relative to the game folder (the one containing QueensDomain.exe), so users extract
 them there. The bundle uses the UE4SS build pinned in packaging/ue4ss.lock.json (verified by SHA-256), without
@@ -24,6 +25,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MOD_DIR = os.path.join(ROOT, "mods", "QDQuickSave")
 LICENSE = os.path.join(ROOT, "LICENSE")
 LOCK = os.path.join(ROOT, "packaging", "ue4ss.lock.json")
+VERSION_FILE = os.path.join(ROOT, "VERSION")
 DIST = os.path.join(ROOT, "dist")
 CACHE = os.path.join(ROOT, ".cache")
 WIN64 = "QueensDomain/Binaries/Win64"
@@ -157,10 +159,13 @@ def write_zip(path, files):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--version", required=True, help="release version, e.g. 1.0.0 (a leading 'v' is stripped)")
+    ap.add_argument("--version", help="release version, e.g. 1.0.0 (a leading 'v' is stripped); default: VERSION file")
     ap.add_argument("--mod-only", action="store_true", help="skip the UE4SS bundle")
     ap.add_argument("--ue4ss-zip", help="local copy of the UE4SS archive pinned in packaging/ue4ss.lock.json")
     args = ap.parse_args()
+    if args.version is None:
+        with open(VERSION_FILE) as f:
+            args.version = f.read().strip()
     version = args.version.lstrip("v")
     if not re.fullmatch(r"[0-9]+\.[0-9]+\.[0-9]+([.-][0-9A-Za-z.-]+)?", version):
         sys.exit(f"invalid version: {args.version}")

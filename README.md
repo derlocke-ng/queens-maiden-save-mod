@@ -4,8 +4,7 @@
 
 Press **F5** to quicksave anywhere, press **F9 twice** to jump back to it, even from the death screen.
 
-This mod uses the game's own built-in "suspend save" (the save the game quietly writes every two minutes for crash
-protection), so loading a quicksave is the same thing the game does when it recovers from a crash. **Your normal
+This mod uses the game's own built-in "suspend save" (the save the game quietly writes every two minutes for crash protection), so loading a quicksave is the same thing the game does when it would recover from a crash (not used it seems). **Your normal
 saves are never touched.**
 
 > Unofficial fan mod. Not made or supported by Freshly Baked Games.

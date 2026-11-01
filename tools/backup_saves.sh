@@ -8,7 +8,7 @@ set -euo pipefail
 SRC="${QD_SAVED:-$HOME/.var/app/com.usebottles.bottles/data/bottles/bottles/${QD_BOTTLE:-gaming}/drive_c/users/$USER/AppData/Local/QueensDomain/Saved}"
 DEST_ROOT="${QD_BACKUP_ROOT:-$(cd "$(dirname "$0")/.." && pwd)/backups}"
 
-if pgrep -fi 'QueensDomain(-Win64-Shipping)?\.exe' >/dev/null; then
+if pgrep -fi '^[A-Z]:\\.*QueensDomain(-Win64-Shipping)?\.exe' >/dev/null; then
     echo "Game appears to be running. Close it first." >&2
     exit 1
 fi

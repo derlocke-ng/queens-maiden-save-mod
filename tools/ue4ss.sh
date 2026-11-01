@@ -20,7 +20,7 @@ BOTTLE="${QD_BOTTLE:-gaming}"
 REGKEY='HKEY_CURRENT_USER\Software\Wine\AppDefaults\QueensDomain-Win64-Shipping.exe\DllOverrides'
 bcli() { flatpak run --command=bottles-cli com.usebottles.bottles "$@"; }
 
-game_running() { pgrep -fi 'QueensDomain(-Win64-Shipping)?\.exe' >/dev/null; }
+game_running() { pgrep -fi '^[A-Z]:\\.*QueensDomain(-Win64-Shipping)?\.exe' >/dev/null; }
 
 case "${1:-}" in
 stage)

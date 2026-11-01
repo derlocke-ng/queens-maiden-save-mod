@@ -4,7 +4,9 @@
 
 Press **F5** to quicksave anywhere, press **F9 twice** to jump back to it, even from the death screen.
 
-This mod uses the game's own built-in "suspend save" (the save the game quietly writes every two minutes for crash protection), so loading a quicksave is the same thing the game does when it would recover from a crash (not used it seems). **Your normal
+This mod uses a hidden "suspend save" built into the game: a save it quietly writes every two minutes and resumes
+automatically when you load the slot (its original purpose is unknown – the game itself never mentions it). A
+quicksave is a copy of that save, and loading one uses the game's own resume. **Your normal
 saves are never touched.**
 
 > Unofficial fan mod. Not made or supported by Freshly Baked Games.
@@ -42,14 +44,14 @@ Without this step nothing happens when you press F5 (Wine uses its own `dwmapi.d
 
 Good to know:
 
-- **Save at a monolith once** in a new game first. Before that, the game treats the slot as empty and F5 refuses.
-- F5 and F9 do nothing in menus, shops, dialogues, cutscenes, while resting at a monolith, or in places where the game
+- **Save at a Crystal Monument once** in a new game first. Before that, the game treats the slot as empty and F5 refuses.
+- F5 and F9 do nothing in menus, shops, dialogues, cutscenes, while resting at a Crystal Monument, or in places where the game
   itself blocks saving (F5 also not on the death screen); the message tells you why.
 - Each save slot has **one** quicksave. A new F5 replaces it (the previous one is kept as a backup file, see below).
-- The death screen's own **Continue** still goes back to your last monolith save – press **F9 twice** instead to
+- The death screen's own **Continue** still goes back to your last Crystal Monument save – press **F9 twice** instead to
   continue from your quicksave.
-- Loading a quicksave also works if you saved at a monolith after quicksaving. It takes you back to the quicksave
-  (your monolith save itself stays untouched).
+- Loading a quicksave also works if you saved at a Crystal Monument after quicksaving. It takes you back to the quicksave
+  (your Crystal Monument save itself stays untouched).
 
 ## What a quicksave restores
 
@@ -87,7 +89,7 @@ Download **`QDQuickSave-<version>.zip`** (mod only) and extract it into the game
 - **Nothing happens at all.** Check that `QueensDomain/Binaries/Win64/ue4ss/UE4SS.log` exists after starting the game.
   No log → the mod loader is not running: re-check the folder you extracted to (`dwmapi.dll` must sit next to
   `QueensDomain-Win64-Shipping.exe`) and, on Linux, the DLL override.
-- **"Save at a monolith in this slot first"** – exactly that: rest/save at a monolith once, then F5 works.
+- **"Save at a Crystal Monument in this slot first"** – rest and save at a Crystal Monument once in that slot, then F5 works.
 - **No message on screen** – every message is also written to `ue4ss/UE4SS.log` (lines starting with `[QDQuickSave]`).
 - **After a game update** the mod loader may need an update too. Remove the mod (see Uninstall) and check for a new
   release here.

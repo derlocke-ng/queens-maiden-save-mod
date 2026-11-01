@@ -1,7 +1,7 @@
 -- QDQuickSave for Queens Domain (UE 4.27, UE4SS experimental).
 --
--- Built on the game's own suspend-save system (the save it writes every 120 s for crash recovery):
---   F5 (in game)       Only once the slot has a monolith save. Ask the game to write its suspend save now
+-- Built on the game's own hidden suspend save (written every 120 s and resumed when the slot is loaded):
+--   F5 (in game)       Only once the slot has a Crystal Monument save. Ask the game to write its suspend save now
 --                      (FS_GameInstance_C:GI_WriteSuspendSaveImmediately), wait until one of the slot's two suspend
 --                      files has new, stable bytes, then copy it to QuickSave_World<N>.sav (the game never reads or
 --                      deletes that name).
@@ -21,6 +21,7 @@ local GI_CLASS = "FS_GameInstance_C"
 local POLL_MS = 250
 local SAVE_TIMEOUT_MS = 20000
 local CONFIRM_MS = 3000
+local DEATH_DUCK_MIX = "/Game/Audio/MixControls/DeathSoundsDuck.DeathSoundsDuck"
 local TOAST_MS = 2500
 local DEATH_HINT_MS = 8000
 
@@ -178,7 +179,7 @@ local function loadableQuickSave(slot)
     local data = src and readFile(src)
     if not isGvas(data) then return nil, "no quicksave for this slot" end
     if not data:find("IsSuspendSave", 1, true) then return nil, "quicksave file is not a suspend save" end
-    if not hasWorldSave(slot) then return nil, "save at a monolith in this slot first" end
+    if not hasWorldSave(slot) then return nil, "save at a Crystal Monument in this slot first" end
     return data
 end
 
@@ -314,7 +315,7 @@ end
 local function busyReason(pawn)
     if monolithPawnAddr ~= nil and pawn and safe(function() return pawn:GetAddress() end) == monolithPawnAddr then
         local menuOpen = anyInViewport("SaveMenu_C") or anyInViewport("SaveTeleportUI_C")
-        if menuOpen or os.time() - monolithSince < MONOLITH_STALE_S then return "not while at a monolith" end
+        if menuOpen or os.time() - monolithSince < MONOLITH_STALE_S then return "not while at a Crystal Monument" end
         monolithPawnAddr = nil
     end
     for _, cls in ipairs(NON_PAUSING_MENUS) do
@@ -352,7 +353,7 @@ local function checkCanQuickSave()
     if saving then return nil, "quicksave already in progress" end
     local slot = activeSlotIndex(gi)
     if not slot then return nil, "cannot determine the save slot" end
-    if not hasWorldSave(slot) then return nil, "save at a monolith in this slot first" end
+    if not hasWorldSave(slot) then return nil, "save at a Crystal Monument in this slot first" end
     return gi, slot
 end
 
@@ -577,6 +578,15 @@ local function quickLoadInGame(gi)
     loadPending = true
     log(string.format("QUICKLOAD in game: slot %d armed%s", slot, dead and " (death screen)" or ""))
     pendingLoadedSlot = slot
+    if dead then
+        -- On death the game pushes the DeathSoundsDuck sound mix (quieter effects); its own Continue pops it before
+        -- reloading (probe trace). Without the same pop, the duck outlives the reload until the game restarts.
+        local mix = StaticFindObject(DEATH_DUCK_MIX)
+        local gs = StaticFindObject("/Script/Engine.Default__GameplayStatics")
+        local popped = mix ~= nil and mix:IsValid() and gs ~= nil and gs:IsValid()
+            and pcall(function() gs:PopSoundMixModifier(gi, mix) end)
+        log("death screen: PopSoundMixModifier(DeathSoundsDuck) " .. (popped and "done" or "not possible"))
+    end
     -- The same two calls the title screen makes when a slot is selected (observed with a logging probe):
     --   FS_GameInstance_C:ForceLoadNewSlot(false, 0)  loads the active slot from disk (suspend files preferred) and
     --                                                 makes it the active save;
@@ -628,7 +638,21 @@ RegisterKeyBind(Key.F5, quickSave)
 RegisterKeyBind(Key.F9, quickLoad)
 maintainHooks()
 
--- Release builds add Mods/QDQuickSave/VERSION.txt; UE4SS's working directory is its ue4ss folder.
-local releaseVersion = (readFile("Mods/QDQuickSave/VERSION.txt") or ""):match("QDQuickSave%s+(%S+)") or "dev (r10)"
+-- Release builds add VERSION.txt next to Scripts/. Find it relative to this script (the process working directory is
+-- not the ue4ss folder: v1.0.0 always logged "dev"), with relative paths as fallbacks.
+local function readVersion()
+    local candidates = {}
+    local src = safe(function() return debug.getinfo(1, "S").source end) or ""
+    local dir = src:gsub("^@", ""):match("^(.*[/\\])Scripts[/\\]main%.lua$")
+    if dir then candidates[#candidates + 1] = dir .. "VERSION.txt" end
+    candidates[#candidates + 1] = "Mods/QDQuickSave/VERSION.txt"
+    candidates[#candidates + 1] = "ue4ss/Mods/QDQuickSave/VERSION.txt"
+    for _, path in ipairs(candidates) do
+        local v = (readFile(path) or ""):match("QDQuickSave%s+(%S+)")
+        if v then return v end
+    end
+    return "dev"
+end
+local releaseVersion = readVersion()
 log("QDQuickSave " .. releaseVersion .. " loaded: F5 quicksave, F9 (twice) quickload in game or on the death screen,"
     .. " F9 on the title for the highlighted slot")

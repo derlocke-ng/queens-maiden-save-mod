@@ -89,20 +89,34 @@ end
 ---------------------------------------------------------------- F6
 
 local NAME_PATTERNS = { "save", "load", "suspend", "slot", "checkpoint", "respawn", "restore", "safelocation",
-                        "quit", "exit", "title", "death", "died", "level" }
+                        "quit", "exit", "title", "death", "died", "level", "volume", "soundmix", "duck", "lowpass" }
 
 -- Hooked in F7: every match under these owners, plus Blueprint (/Game/) functions whose names match
 -- the narrower HOOK_PATTERNS ("load"/"slot" alone are too noisy there: UI, animation slots).
 -- Everything else F6 finds is only listed.
 local HOOK_OWNERS = { "/Script/FB_SaveUtils", "/Script/QueensDomain", "/Game/Blueprints/SaveSystem/",
                       "/Game/Blueprints/FS_GameInstance.", "/Game/UI/Menus/PauseMenu.", "/Game/UI/Title/TitleScreenUI." }
-local HOOK_PATTERNS = { "save", "suspend", "checkpoint", "restore", "safelocation", "quit", "death", "died" }
+local HOOK_PATTERNS = { "save", "suspend", "checkpoint", "restore", "safelocation", "quit", "death", "died",
+                        "volume", "soundmix", "duck", "lowpass" }
+
+-- Every function of these owners is listed and hooked, whatever its name (death screen: effects-volume bug).
+local FULL_OWNERS = { "/Game/UI/Menus/DieUI." }
 
 -- Engine functions the game may use to change maps or quit; hooked directly (engine owners are not scanned).
 local EXTRA_HOOKS = {
     "/Script/Engine.GameplayStatics:OpenLevel",
     "/Script/Engine.GameplayStatics:OpenLevelBySoftObjectPtr",
     "/Script/Engine.KismetSystemLibrary:QuitGame",
+    -- audio state that survives a level load (effects-volume bug after death + reload)
+    "/Script/Engine.GameplayStatics:PushSoundMixModifier",
+    "/Script/Engine.GameplayStatics:PopSoundMixModifier",
+    "/Script/Engine.GameplayStatics:ClearSoundMixModifiers",
+    "/Script/Engine.GameplayStatics:SetBaseSoundMix",
+    "/Script/Engine.GameplayStatics:SetSoundMixClassOverride",
+    "/Script/Engine.GameplayStatics:ClearSoundMixClassOverride",
+    "/Script/Engine.GameplayStatics:SetGlobalPitchModulation",
+    "/Script/Engine.GameplayStatics:ActivateReverbEffect",
+    "/Script/Engine.GameplayStatics:DeactivateReverbEffect",
 }
 
 -- Called every frame or thousands of times per minute (trace 1); hooking them only costs frame time.
@@ -123,7 +137,15 @@ local function matchesAny(name, patterns)
     return false
 end
 
+local function isFullOwner(path)
+    for _, owner in ipairs(FULL_OWNERS) do
+        if path:find(owner, 1, true) == 1 then return true end
+    end
+    return false
+end
+
 local function isHookCandidate(path, name)
+    if isFullOwner(path) then return true end
     for _, s in ipairs(HOOK_SKIP) do
         if path:find(s, 1, true) then return false end
     end
@@ -161,9 +183,9 @@ local function doScan()
         local cls = obj:GetClass()
         if not cls:IsValid() or cls:GetFName() ~= FunctionName then return end
         local name = obj:GetFName():ToString()
-        if not matchesAny(name, NAME_PATTERNS) then return end
         local full = obj:GetFullName()                 -- "Function /Path/Owner.Class:Func"
         local path = full:match("^%S+%s+(.+)$") or full
+        if not matchesAny(name, NAME_PATTERNS) and not isFullOwner(path) then return end
         if isEngineOwner(path) then return end
         listed = listed + 1
         local hook = isHookCandidate(path, name)

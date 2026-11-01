@@ -1,0 +1,7 @@
+{
+  "comment": "UE4SS build bundled into the -with-UE4SS release. This exact file was tested with Queens Domain 1.01.00 (build 13464). The upstream 'experimental-latest' release is rolling, so this URL disappears when upstream publishes a new build; then download the new build, test it in game, and update url, file and sha256 here (or point url at a copy attached to a release of this repository).",
+  "file": "zDEV-UE4SS_v3.0.1-1194-ge84db30c.zip",
+  "url": "https://github.com/UE4SS-RE/RE-UE4SS/releases/download/experimental-latest/zDEV-UE4SS_v3.0.1-1194-ge84db30c.zip",
+  "sha256": "91215e0fd475760ab46ddd0a2e4fc3ce2eb010413d892689bec4900816685ce4",
+  "commit": "e84db30c"
+}

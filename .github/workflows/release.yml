@@ -1,0 +1,41 @@
+name: Release
+
+# Push a tag like v1.0.0 to build both zips and publish them as a GitHub Release.
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Lua compiler
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends lua5.4
+
+      - name: Lua syntax
+        run: for f in mods/*/Scripts/main.lua; do luac5.4 -p "$f"; done
+
+      - name: Build packages
+        # Downloads the UE4SS build pinned in packaging/ue4ss.lock.json and checks its SHA-256.
+        # If upstream has replaced that build, this step fails: update the lock file after testing a new build.
+        run: python3 tools/build_release.py --version "${GITHUB_REF_NAME}"
+
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cat > notes.md <<'EOF'
+          **Which file do I need?**
+          - New to mods? Download **QDQuickSave-…-with-UE4SS.zip** (includes UE4SS, the mod loader).
+          - Already using UE4SS? Download **QDQuickSave-….zip** (the mod only).
+
+          Extract into the game folder (the one with `QueensDomain.exe`). Full instructions, including the one extra step
+          for Linux / Steam Deck: see the [README](https://github.com/${{ github.repository }}#readme).
+          EOF
+          gh release create "${GITHUB_REF_NAME}" dist/*.zip dist/SHA256SUMS.txt \
+            --title "QDQuickSave ${GITHUB_REF_NAME}" --notes-file notes.md

@@ -1,0 +1,13 @@
+# Personal data and local research artefacts: never publish
+backups/
+snapshots/
+logs/
+dumps/
+# Third-party binaries (UE4SS download, staging, install manifest)
+ue4ss/
+# Build output and download cache
+dist/
+.cache/
+__pycache__/
+*.pyc
+NOTES.md

@@ -127,6 +127,52 @@ local function isPaused(worldContext)
     return gs ~= nil and gs:IsValid() and safe(function() return gs:IsGamePaused(worldContext) end) == true
 end
 
+---------------------------------------------------------------- death duck
+--
+-- When the death animation starts the game pushes the DeathSoundsDuck sound mix (quieter effects); its own Continue
+-- pops it before reloading. Sound mix modifiers live in the audio device and survive OpenLevel, so a quickload made
+-- while it is pushed (v1.0.1: F9 during the death animation, before the death screen) kept the effects quieter until
+-- a restart (QDAudioTrace). Its pushes and pops are counted here so a quickload or a finished reload can pop it.
+-- Only this mix is touched: it is the only one the game pushed in every trace.
+
+local deathDuckPushes = 0
+local duckHooksOk = false
+
+do
+    local function count(delta)
+        return function(self, ctx, mix)
+            local m = safe(function() return mix:get() end)
+            local full = m and safe(function() return m:GetFullName() end) or ""
+            if full:gsub("^%S+%s+", "") == DEATH_DUCK_MIX then deathDuckPushes = math.max(0, deathDuckPushes + delta) end
+        end
+    end
+    duckHooksOk = pcall(RegisterHook, "/Script/Engine.GameplayStatics:PushSoundMixModifier", count(1))
+        and pcall(RegisterHook, "/Script/Engine.GameplayStatics:PopSoundMixModifier", count(-1))
+    if duckHooksOk then
+        pcall(RegisterHook, "/Script/Engine.GameplayStatics:ClearSoundMixModifiers", function() deathDuckPushes = 0 end)
+    else
+        log("could not hook PushSoundMixModifier/PopSoundMixModifier; the death duck is popped once per death-screen quickload")
+    end
+end
+
+-- Pop the death duck as often as it is still pushed (once, unconditionally, when the hooks are missing and force is
+-- set). Returns the number of pops.
+local function popDeathDuck(gi, force)
+    local n = duckHooksOk and deathDuckPushes or (force and 1 or 0)
+    if n == 0 then return 0 end
+    local mix = StaticFindObject(DEATH_DUCK_MIX)
+    local gs = StaticFindObject("/Script/Engine.Default__GameplayStatics")
+    local popped = 0
+    if mix ~= nil and mix:IsValid() and gs ~= nil and gs:IsValid() then
+        for _ = 1, n do
+            if pcall(function() gs:PopSoundMixModifier(gi, mix) end) then popped = popped + 1 end
+        end
+    end
+    deathDuckPushes = 0
+    log(string.format("PopSoundMixModifier(DeathSoundsDuck): %d of %d done", popped, n))
+    return popped
+end
+
 local function validSlot(n)
     if type(n) == "number" and n >= 0 and n <= 9 then return math.floor(n) end
     return nil
@@ -311,6 +357,17 @@ local function onClosedSaveMenu(self)
     monolithPawnAddr = nil
 end
 
+-- FS_PlayerChar_C:DeathAnim starts the death animation, seconds before the death screen; the reload spawns a new pawn.
+local dyingPawnAddr = nil
+
+local function onDeathAnim(self)
+    dyingPawnAddr = safe(function() return self:get():GetAddress() end)
+end
+
+local function isDying(pawn)
+    return dyingPawnAddr ~= nil and pawn ~= nil and safe(function() return pawn:GetAddress() end) == dyingPawnAddr
+end
+
 -- Returns a short reason when the player is in a monolith interaction or a non-pausing menu, else nil.
 local function busyReason(pawn)
     if monolithPawnAddr ~= nil and pawn and safe(function() return pawn:GetAddress() end) == monolithPawnAddr then
@@ -341,7 +398,7 @@ local function checkCanQuickSave()
     if save == nil or not save:IsValid() then return nil, "no active save" end
     local pawn = getPawn()
     if not pawn then return nil, "not in game" end
-    if onDeathScreen() then return nil, "not while dead" end
+    if onDeathScreen() or isDying(pawn) then return nil, "not while dead" end
     if safe(function() return gi.InCutscene end) == true then return nil, "not during a cutscene" end
     if isPaused(pawn) then return nil, "close the menu first" end
     local busy = busyReason(pawn)
@@ -466,6 +523,14 @@ local function onRestoreSuspend(self)
     end)
 end
 
+-- FS_PlayerChar_C:RestoreToSavePoint runs when any load (game's or ours) has finished. The death duck still pushed
+-- at that point can only be a leak, whichever path caused it.
+local function onRestoreToSavePoint(self)
+    dyingPawnAddr = nil   -- a new pawn may reuse the old one's address
+    local gi = getGameInstance()
+    if gi and popDeathDuck(gi, false) > 0 then log("after reload: removed a leftover death duck") end
+end
+
 local function onDeathButtons(self)
     if loadPending then return end
     local gi = getGameInstance()
@@ -484,6 +549,8 @@ local BP_HOOKS = {
     { path = "/Game/Player/FS_PlayerChar.FS_PlayerChar_C:RestoreSuspend", fn = onRestoreSuspend },
     { path = "/Game/Player/FS_PlayerChar.FS_PlayerChar_C:OpenSaveMenu", fn = onOpenSaveMenu },
     { path = "/Game/Player/FS_PlayerChar.FS_PlayerChar_C:ClosedSaveMenu", fn = onClosedSaveMenu },
+    { path = "/Game/Player/FS_PlayerChar.FS_PlayerChar_C:DeathAnim", fn = onDeathAnim },
+    { path = "/Game/Player/FS_PlayerChar.FS_PlayerChar_C:RestoreToSavePoint", fn = onRestoreToSavePoint },
 }
 
 local function maintainHooks()
@@ -576,17 +643,12 @@ local function quickLoadInGame(gi)
         return
     end
     loadPending = true
-    log(string.format("QUICKLOAD in game: slot %d armed%s", slot, dead and " (death screen)" or ""))
+    local dying = not dead and isDying(pawn)
+    log(string.format("QUICKLOAD in game: slot %d armed%s", slot,
+        dead and " (death screen)" or dying and " (death animation)" or ""))
     pendingLoadedSlot = slot
-    if dead then
-        -- On death the game pushes the DeathSoundsDuck sound mix (quieter effects); its own Continue pops it before
-        -- reloading (probe trace). Without the same pop, the duck outlives the reload until the game restarts.
-        local mix = StaticFindObject(DEATH_DUCK_MIX)
-        local gs = StaticFindObject("/Script/Engine.Default__GameplayStatics")
-        local popped = mix ~= nil and mix:IsValid() and gs ~= nil and gs:IsValid()
-            and pcall(function() gs:PopSoundMixModifier(gi, mix) end)
-        log("death screen: PopSoundMixModifier(DeathSoundsDuck) " .. (popped and "done" or "not possible"))
-    end
+    -- Like the game's own Continue, remove the death duck before reloading.
+    popDeathDuck(gi, dead or dying)
     -- The same two calls the title screen makes when a slot is selected (observed with a logging probe):
     --   FS_GameInstance_C:ForceLoadNewSlot(false, 0)  loads the active slot from disk (suspend files preferred) and
     --                                                 makes it the active save;

@@ -46,7 +46,7 @@ Good to know:
 
 - **Save at a Crystal Monument once** in a new game first. Before that, the game treats the slot as empty and F5 refuses.
 - F5 and F9 do nothing in menus, shops, dialogues, cutscenes, while resting at a Crystal Monument, or in places where the game
-  itself blocks saving (F5 also not on the death screen); the message tells you why.
+  itself blocks saving (F5 also not while dying or on the death screen); the message tells you why.
 - Each save slot has **one** quicksave. A new F5 replaces it (the previous one is kept as a backup file, see below).
 - The death screen's own **Continue** still goes back to your last Crystal Monument save – press **F9 twice** instead to
   continue from your quicksave.

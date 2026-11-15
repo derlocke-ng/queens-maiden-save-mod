@@ -127,3 +127,4 @@ then builds both zips, creates the tag `v1.0.1` and publishes the GitHub Release
 - QDQuickSave is released under the [MIT licence](LICENSE).
 - [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) – the mod loader (MIT licence, included in the bundle as `ue4ss/LICENSE`).
 - Queens Domain by Freshly Baked Games. This project contains no game files.
+- Thanks to @bahcall (Steam) for the fix for versions later than 1.01.06

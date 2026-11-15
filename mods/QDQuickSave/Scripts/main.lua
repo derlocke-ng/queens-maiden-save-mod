@@ -1,6 +1,7 @@
 -- QDQuickSave for Queens Domain (UE 4.27, UE4SS experimental).
 --
 -- Built on the game's own hidden suspend save (written every 120 s and resumed when the slot is loaded):
+-- The two hotkeys are read from config.ini in the mod folder (next to Scripts/); the defaults are F5 and F9:
 --   F5 (in game)       Only once the slot has a Crystal Monument save. Ask the game to write its suspend save now
 --                      (FS_GameInstance_C:GI_WriteSuspendSaveImmediately), wait until one of the slot's two suspend
 --                      files has new, stable bytes, then copy it to QuickSave_World<N>.sav (the game never reads or
@@ -24,6 +25,7 @@ local CONFIRM_MS = 3000
 local DEATH_DUCK_MIX = "/Game/Audio/MixControls/DeathSoundsDuck.DeathSoundsDuck"
 local TOAST_MS = 2500
 local DEATH_HINT_MS = 8000
+local CONFIG_NOTICE_MS = 10000
 
 local function log(msg)
     print(TAG .. msg .. "\n")
@@ -81,6 +83,131 @@ local function writeFileSafely(dst, data, keepPrev)
     if not ok then return false, "cannot rename " .. tmp .. ": " .. tostring(err) end
     return true
 end
+
+---------------------------------------------------------------- hotkeys (config.ini)
+
+-- Paths to try for a file in the mod folder (next to Scripts/). The folder is found relative to this script, because
+-- the process working directory is not the ue4ss folder (v1.0.0 always logged "dev"); relative paths are fallbacks.
+local SCRIPT_SOURCE = safe(function() return debug.getinfo(1, "S").source end) or ""
+
+local function modFilePaths(name)
+    local paths = {}
+    local dir = SCRIPT_SOURCE:gsub("^@", ""):match("^(.*[/\\])Scripts[/\\]main%.lua$")
+    if dir then paths[#paths + 1] = dir .. name end
+    paths[#paths + 1] = "Mods/QDQuickSave/" .. name
+    paths[#paths + 1] = "ue4ss/Mods/QDQuickSave/" .. name
+    return paths
+end
+
+local DEFAULT_HOTKEYS = { QuickSave = "F5", QuickLoad = "F9" }
+
+-- Friendlier spellings for names in UE4SS's Key table (compared upper-case, without spaces, "_" and "-").
+local KEY_ALIASES = {
+    INSERT = "INS", DELETE = "DEL", ENTER = "RETURN", ESC = "ESCAPE", PGUP = "PAGE_UP", PGDN = "PAGE_DOWN",
+    UP = "UP_ARROW", DOWN = "DOWN_ARROW", LEFT = "LEFT_ARROW", RIGHT = "RIGHT_ARROW",
+    PLUS = "OEM_PLUS", MINUS = "OEM_MINUS", COMMA = "OEM_COMMA", PERIOD = "OEM_PERIOD",
+    NUMPLUS = "ADD", NUMMINUS = "SUBTRACT", NUMMULTIPLY = "MULTIPLY", NUMDIVIDE = "DIVIDE", NUMDECIMAL = "DECIMAL",
+}
+for i, word in ipairs({ "ZERO", "ONE", "TWO", "THREE", "FOUR", "FIVE", "SIX", "SEVEN", "EIGHT", "NINE" }) do
+    KEY_ALIASES[tostring(i - 1)] = word
+    KEY_ALIASES["NUM" .. (i - 1)] = "NUM_" .. word
+    KEY_ALIASES["NUMPAD" .. (i - 1)] = "NUM_" .. word
+end
+local MODIFIER_ALIASES = { CTRL = "CONTROL", CONTROL = "CONTROL", STRG = "CONTROL", SHIFT = "SHIFT", ALT = "ALT" }
+local MODIFIER_LABELS = { CONTROL = "Ctrl", SHIFT = "Shift", ALT = "Alt" }
+
+local function normalizeKeyName(name)
+    return (name:upper():gsub("[%s_%-]", ""))
+end
+
+local keysByName = nil
+local function findKey(name)
+    local norm = normalizeKeyName(name)
+    if KEY_ALIASES[norm] then return Key[KEY_ALIASES[norm]] end
+    if not keysByName then
+        keysByName = {}
+        pcall(function() for k, v in pairs(Key) do keysByName[normalizeKeyName(tostring(k))] = v end end)
+    end
+    return keysByName[norm] or safe(function() return Key[name:upper():gsub("[%s%-]", "_")] end)
+end
+
+-- "F8", "Ctrl+S", "Shift + PageUp" -> { key = <Key value>, mods = { <ModifierKey values> }, label = "Ctrl+S" },
+-- or nil and a reason.
+local function parseHotkey(text)
+    local parts = {}
+    for part in (text .. "+"):gmatch("%s*(.-)%s*%+") do
+        if part == "" then return nil, "'" .. text .. "' is not a key" end
+        parts[#parts + 1] = part
+    end
+    local keyName = table.remove(parts)
+    if not keyName then return nil, "no key given" end
+    local key = findKey(keyName)
+    if key == nil then return nil, "unknown key '" .. keyName .. "'" end
+    local mods, labels, seen = {}, {}, {}
+    for _, part in ipairs(parts) do
+        local mod = MODIFIER_ALIASES[normalizeKeyName(part)]
+        if not mod then return nil, "unknown modifier '" .. part .. "' (use Ctrl, Shift or Alt)" end
+        if not seen[mod] then
+            seen[mod] = true
+            mods[#mods + 1] = ModifierKey[mod]
+            labels[#labels + 1] = MODIFIER_LABELS[mod]
+        end
+    end
+    labels[#labels + 1] = keyName:upper()
+    return { key = key, mods = mods, label = table.concat(labels, "+") }
+end
+
+-- config.ini: "Name = value" lines; ";" or "#" starts a comment. Returns { lowercase name = value }, or nil without
+-- a file.
+local function readConfig()
+    for _, path in ipairs(modFilePaths("config.ini")) do
+        local data = readFile(path)
+        if data then
+            local values = {}
+            for line in data:gsub("^\239\187\191", ""):gmatch("[^\r\n]+") do
+                local name, value = line:gsub("[;#].*$", ""):match("^%s*([%w_]+)%s*=%s*(.-)%s*$")
+                if name and value ~= "" then values[name:lower()] = value end
+            end
+            return values, path
+        end
+    end
+    return nil
+end
+
+-- Returns { QuickSave = hotkey, QuickLoad = hotkey } and a list of problems. A setting that is missing or wrong
+-- falls back to its default, so the mod always has both keys.
+local function loadHotkeys()
+    local problems = {}
+    local values, path = readConfig()
+    if values then log("config: " .. path) else log("config: no config.ini, using the default keys") end
+    local hotkeys = {}
+    for _, name in ipairs({ "QuickSave", "QuickLoad" }) do
+        local default = DEFAULT_HOTKEYS[name]
+        local text = values and values[name:lower()] or default
+        local hotkey, why = parseHotkey(text)
+        if not hotkey then
+            problems[#problems + 1] = string.format("%s: %s, using %s", name, why, default)
+            hotkey = assert(parseHotkey(default))
+        end
+        hotkeys[name] = hotkey
+    end
+    -- A key without modifiers also fires while modifiers are held, so the two hotkeys need different keys.
+    if hotkeys.QuickSave.key == hotkeys.QuickLoad.key then
+        problems[#problems + 1] = string.format("QuickSave and QuickLoad need different keys, using %s and %s",
+            DEFAULT_HOTKEYS.QuickSave, DEFAULT_HOTKEYS.QuickLoad)
+        hotkeys.QuickSave = assert(parseHotkey(DEFAULT_HOTKEYS.QuickSave))
+        hotkeys.QuickLoad = assert(parseHotkey(DEFAULT_HOTKEYS.QuickLoad))
+    end
+    return hotkeys, problems
+end
+
+local HOTKEYS, hotkeyProblems = loadHotkeys()
+local SAVE_KEY = HOTKEYS.QuickSave.label
+local LOAD_KEY = HOTKEYS.QuickLoad.label
+-- Shown on screen once a screen can show it (maintainHooks); always in the log.
+local configNotice = nil
+for _, problem in ipairs(hotkeyProblems) do log("config.ini: " .. problem) end
+if #hotkeyProblems > 0 then configNotice = "QDQuickSave config.ini - " .. hotkeyProblems[1] end
 
 ---------------------------------------------------------------- game queries (game thread only)
 
@@ -384,7 +511,7 @@ local function busyReason(pawn)
     return nil
 end
 
----------------------------------------------------------------- F5 quicksave
+---------------------------------------------------------------- quicksave (F5 by default)
 
 local saving = false
 local requestCounter = 0
@@ -536,7 +663,7 @@ local function onDeathButtons(self)
     local gi = getGameInstance()
     local slot = gi and activeSlotIndex(gi)
     if slot and loadableQuickSave(slot) then
-        showMessage("F9 (twice): continue from quicksave", DEATH_HINT_MS)
+        showMessage(LOAD_KEY .. " (twice): continue from quicksave", DEATH_HINT_MS)
     end
 end
 
@@ -555,6 +682,10 @@ local BP_HOOKS = {
 
 local function maintainHooks()
     ExecuteInGameThread(function()
+        if configNotice and (onTitleScreen() or getPawn()) then
+            showMessage(configNotice, CONFIG_NOTICE_MS)
+            configNotice = nil
+        end
         for _, h in ipairs(BP_HOOKS) do
             local f = StaticFindObject(h.path)
             local addr = f and f:IsValid() and safe(function() return f:GetAddress() end)
@@ -571,14 +702,14 @@ local function maintainHooks()
     ExecuteWithDelay(2000, maintainHooks)
 end
 
----------------------------------------------------------------- F9 quickload
+---------------------------------------------------------------- quickload (F9 by default)
 
 local confirmToken = nil
 
 local function quickLoadOnTitle(gi)
     local slot = focusedSlot
     if not slot then
-        showMessage("Choose Play and highlight a slot, then press F9")
+        showMessage("Choose Play and highlight a slot, then press " .. LOAD_KEY)
         return
     end
     local data, why = loadableQuickSave(slot)
@@ -627,7 +758,7 @@ local function quickLoadInGame(gi)
     if confirmToken == nil then
         local token = {}
         confirmToken = token
-        showMessage("Press F9 again to load quicksave", CONFIRM_MS)
+        showMessage("Press " .. LOAD_KEY .. " again to load quicksave", CONFIRM_MS)
         ExecuteWithDelay(CONFIRM_MS, function() if confirmToken == token then confirmToken = nil end end)
         return
     end
@@ -696,25 +827,21 @@ local function quickLoad()
     end)
 end
 
-RegisterKeyBind(Key.F5, quickSave)
-RegisterKeyBind(Key.F9, quickLoad)
+local function bindHotkey(hotkey, fn)
+    if #hotkey.mods > 0 then RegisterKeyBind(hotkey.key, hotkey.mods, fn) else RegisterKeyBind(hotkey.key, fn) end
+end
+bindHotkey(HOTKEYS.QuickSave, quickSave)
+bindHotkey(HOTKEYS.QuickLoad, quickLoad)
 maintainHooks()
 
--- Release builds add VERSION.txt next to Scripts/. Find it relative to this script (the process working directory is
--- not the ue4ss folder: v1.0.0 always logged "dev"), with relative paths as fallbacks.
+-- Release builds add VERSION.txt next to Scripts/.
 local function readVersion()
-    local candidates = {}
-    local src = safe(function() return debug.getinfo(1, "S").source end) or ""
-    local dir = src:gsub("^@", ""):match("^(.*[/\\])Scripts[/\\]main%.lua$")
-    if dir then candidates[#candidates + 1] = dir .. "VERSION.txt" end
-    candidates[#candidates + 1] = "Mods/QDQuickSave/VERSION.txt"
-    candidates[#candidates + 1] = "ue4ss/Mods/QDQuickSave/VERSION.txt"
-    for _, path in ipairs(candidates) do
+    for _, path in ipairs(modFilePaths("VERSION.txt")) do
         local v = (readFile(path) or ""):match("QDQuickSave%s+(%S+)")
         if v then return v end
     end
     return "dev"
 end
 local releaseVersion = readVersion()
-log("QDQuickSave " .. releaseVersion .. " loaded: F5 quicksave, F9 (twice) quickload in game or on the death screen,"
-    .. " F9 on the title for the highlighted slot")
+log(string.format("QDQuickSave %s loaded: %s quicksave, %s (twice) quickload in game or on the death screen,"
+    .. " %s on the title for the highlighted slot", releaseVersion, SAVE_KEY, LOAD_KEY, LOAD_KEY))

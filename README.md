@@ -1,114 +1,169 @@
-# QDQuickSave – Quicksave & Quickload for Queens Domain
+# QDQuickSave – Quicksave & Quickload for Queen's Domain
 
 [![CI](https://github.com/derlocke-ng/queens-maiden-save-mod/actions/workflows/ci.yml/badge.svg)](https://github.com/derlocke-ng/queens-maiden-save-mod/actions/workflows/ci.yml)
+[![Latest release](https://img.shields.io/github/v/release/derlocke-ng/queens-maiden-save-mod)](https://github.com/derlocke-ng/queens-maiden-save-mod/releases/latest)
 
-Press **F5** to quicksave anywhere, press **F9 twice** to jump back to it, even from the death screen.
+Press **F5** to quicksave anywhere and **F9 twice** to go back to it, even from the death screen.
+Both keys can be changed.
 
-This mod uses a hidden "suspend save" built into the game: a save it quietly writes every two minutes and resumes
-automatically when you load the slot (its original purpose is a crash protection – the game itself never mentions it). A
-quicksave is a copy of that save, and loading one uses the game's own resume. **Your normal
-saves are never touched.**
+- **Your normal saves are never touched.** A quicksave is a separate file next to them.
+- **One quicksave per save slot**, restoring position, health, inventory and progress.
+- **Uses the game's own save code.** The game quietly writes a "suspend save" every two minutes and resumes it
+  when you load the slot (crash protection it never mentions). A quicksave is a copy of that save, and loading one
+  is the game's own resume.
+- Windows, Linux and Steam Deck.
 
 > Unofficial fan mod. Not made or supported by Freshly Baked Games.
 
+**Contents:** [Install](#install) · [How to use](#how-to-use) · [Change the hotkeys](#change-the-hotkeys) ·
+[What a quicksave restores](#what-a-quicksave-restores) · [Update](#update) · [Uninstall](#uninstall) ·
+[Troubleshooting](#troubleshooting) · [Safety](#safety) · [For developers](#for-developers)
+
 ---
 
-## Quick start (Windows)
+## Install
+
+### Windows
 
 1. Download **[QDQuickSave-with-UE4SS.zip](https://github.com/derlocke-ng/queens-maiden-save-mod/releases/latest/download/QDQuickSave-with-UE4SS.zip)**
-   (always the newest version; all versions are on the [Releases](https://github.com/derlocke-ng/queens-maiden-save-mod/releases) page).
-2. Open the game folder: in Steam, right-click *Queens Domain* → **Manage** → **Browse local files**.
+   (always the newest version; older ones are on the [Releases](https://github.com/derlocke-ng/queens-maiden-save-mod/releases) page).
+2. Open the game folder: in Steam, right-click *Queen's Domain* → **Manage** → **Browse local files**.
    It is the folder that contains `QueensDomain.exe`.
-3. Extract the zip **into that folder** (keep the folder structure). Done – start the game.
+3. Extract the zip **into that folder**, keeping the folder structure.
+4. Check that `QueensDomain\Binaries\Win64\dwmapi.dll` now exists, then start the game.
 
-## Quick start (Linux, Steam Deck, Proton, Bottles, Lutris)
+### Linux, Steam Deck, Proton, Bottles, Lutris
 
-Do steps 1–3 above, then tell Wine to load the mod loader (one-time step):
+Do the Windows steps, then tell Wine to load the mod loader (once):
 
 - **Steam / Steam Deck (Proton):** right-click the game → **Properties** → **Launch options**, paste:
   ```
   WINEDLLOVERRIDES="dwmapi=n,b" %command%
   ```
-- **Bottles:** open the bottle → **Settings** → **DLL overrides** → add `dwmapi` and set it to **Native, then Builtin**.
+- **Bottles:** open the bottle → **Settings** → **DLL overrides** → add `dwmapi`, set to **Native, then Builtin**.
 - **Lutris:** right-click the game → **Configure** → **Runner options** → **DLL overrides** → add `dwmapi` = `n,b`.
 
-Without this step nothing happens when you press F5 (Wine uses its own `dwmapi.dll` instead of the mod loader's).
+Without this step the mod does not load, because Wine uses its own `dwmapi.dll` instead of the mod loader's.
+
+### Already using UE4SS?
+
+Download **[QDQuickSave.zip](https://github.com/derlocke-ng/queens-maiden-save-mod/releases/latest/download/QDQuickSave.zip)**
+(the mod only) and extract it into the game folder. It adds
+`QueensDomain/Binaries/Win64/ue4ss/Mods/QDQuickSave/`, enabled by its `enabled.txt`.
 
 ## How to use
 
-| Key | Where | What happens |
+| Default key | Where | What happens |
 |---|---|---|
-| **F5** | while playing | Quicksave. A message *"Quicksave saved - Slot N"* appears at the top of the screen. |
-| **F9**, then **F9** again within 3 s | while playing, or on the death screen | Loads your quicksave. *"Quicksave loaded - Slot N"* appears when you're back. |
-| **F9** | title screen: **Play** → highlight a slot | Prepares that slot's quicksave; then select the slot to load it. |
+| **F5** | while playing | Quicksave. *"Quicksave saved - Slot N"* appears at the top of the screen. |
+| **F9**, then **F9** again within 3 s | while playing, or on the death screen | Loads your quicksave. *"Quicksave loaded - Slot N"* appears when you are back. |
+| **F9** | title screen: **Play** → highlight a slot | Prepares that slot's quicksave; select the slot to load it. |
 
 Good to know:
 
-- **Save at a Crystal Monument once** in a new game first. Before that, the game treats the slot as empty and F5 refuses.
-- F5 and F9 do nothing in menus, shops, dialogues, cutscenes, while resting at a Crystal Monument, or in places where the game
-  itself blocks saving (F5 also not while dying or on the death screen); the message tells you why.
-- Each save slot has **one** quicksave. A new F5 replaces it (the previous one is kept as a backup file, see below).
-- The death screen's own **Continue** still goes back to your last Crystal Monument save – press **F9 twice** instead to
-  continue from your quicksave.
-- Loading a quicksave also works if you saved at a Crystal Monument after quicksaving. It takes you back to the quicksave
-  (your Crystal Monument save itself stays untouched).
+- **Save at a Crystal Monument once** in a new game. Until then the game treats the slot as empty and quicksaving
+  is refused.
+- The keys do nothing in menus, shops, dialogues and cutscenes, while resting at a Crystal Monument, or where the
+  game itself blocks saving. Quicksaving is also refused while dying and on the death screen. The message says why.
+- Each save slot has **one** quicksave. A new one replaces it; the previous one is kept as a `.prev` backup file.
+- The death screen's own **Continue** still goes back to your last Crystal Monument save. Press the quickload key
+  twice instead to continue from your quicksave.
+- A quicksave still loads after you have saved at a Crystal Monument later on. It takes you back to the quicksave;
+  the Crystal Monument save stays as it is.
+
+## Change the hotkeys
+
+Open this file in a text editor (Notepad is fine):
+
+```
+QueensDomain\Binaries\Win64\ue4ss\Mods\QDQuickSave\config.ini
+```
+
+Change the key after the `=`, save the file and restart the game:
+
+```ini
+QuickSave = F5
+QuickLoad = F9
+```
+
+| You can use | Written as |
+|---|---|
+| Function keys | `F1` … `F12` |
+| Letters and digits | `A` … `Z`, `0` … `9` |
+| Numpad | `Num0` … `Num9` |
+| Navigation | `Insert`, `Delete`, `Home`, `End`, `PageUp`, `PageDown`, `Up`, `Down`, `Left`, `Right` |
+| Other | `Tab`, `Space`, `Backspace`, `Enter`, `Pause` |
+| With a modifier | `Ctrl+S`, `Shift+F9`, `Ctrl+Alt+Q` (modifiers: `Ctrl`, `Shift`, `Alt`) |
+
+Any other name from UE4SS's [key list](https://docs.ue4ss.com/lua-api/table-definitions/key.html) works too.
+Upper and lower case do not matter.
+
+- Use **two different keys**, and keys the game does not already use: the game still reacts to its own bindings.
+- A name the mod does not know falls back to F5 / F9. The game shows a message on the title screen and
+  `ue4ss/UE4SS.log` has the reason.
+- The messages on screen name the keys you chose.
+- Without a `config.ini` the mod uses F5 and F9.
 
 ## What a quicksave restores
 
 Tested in game:
 
-- your **position** (if you quicksave mid-jump you land on the ground below),
+- your **position** (a quicksave made mid-jump puts you on the ground below),
 - your **health**,
-- your **inventory and consumables** (e.g. a herb used after quicksaving is back),
-- items you picked up after quicksaving are back in the world,
-- story/progress flags, notes and the loaded area, the same way the game's own suspend save does.
+- your **inventory and consumables** (a herb used after quicksaving is back),
+- items picked up after quicksaving are back in the world,
+- story and progress flags, notes and the loaded area, the same way the game's own suspend save does.
 
-The rest of the world (enemies, etc.) is set up the way the game always does when it loads a save.
+The rest of the world (enemies and so on) is set up the way the game always does when it loads a save.
+
+## Update
+
+Extract the new zip into the game folder and let it replace the old files. Your quicksaves stay.
+
+Updating replaces `config.ini`. If you changed your hotkeys, copy the file somewhere first and put it back after.
 
 ## Uninstall
 
-Delete these from the game's `QueensDomain/Binaries/Win64/` folder:
+Delete these from `QueensDomain/Binaries/Win64/`:
 
 - `dwmapi.dll`
 - the `ue4ss` folder
 
-(If you used the mod-only zip with your own UE4SS: delete just `ue4ss/Mods/QDQuickSave`.)
+With the mod-only zip and your own UE4SS, delete just `ue4ss/Mods/QDQuickSave`.
+On Linux, also remove the launch option or DLL override.
 
-On Linux, also remove the launch option / DLL override again.
-
-Quicksave files stay in your save folder until you delete them (harmless if left there):
+Quicksave files stay in your save folder until you delete them, and are harmless if left there:
 `%LOCALAPPDATA%\QueensDomain\Saved\SaveGames\<number>\QuickSave_World*.sav` (and `.sav.prev`).
-
-## Already using UE4SS?
-
-Download **`QDQuickSave-<version>.zip`** (mod only) and extract it into the game folder. It adds
-`QueensDomain/Binaries/Win64/ue4ss/Mods/QDQuickSave/` (enabled via its `enabled.txt`).
 
 ## Troubleshooting
 
-- **Nothing happens at all.** Check that `QueensDomain/Binaries/Win64/ue4ss/UE4SS.log` exists after starting the game.
-  No log → the mod loader is not running: re-check the folder you extracted to (`dwmapi.dll` must sit next to
-  `QueensDomain-Win64-Shipping.exe`) and, on Linux, the DLL override.
-- **"Save at a Crystal Monument in this slot first"** – rest and save at a Crystal Monument once in that slot, then F5 works.
-- **No message on screen** – every message is also written to `ue4ss/UE4SS.log` (lines starting with `[QDQuickSave]`).
-- **After a game update** the mod loader may need an update too. Remove the mod (see Uninstall) and check for a new
-  release here.
+- **Nothing happens at all.** Check that `QueensDomain/Binaries/Win64/ue4ss/UE4SS.log` exists after starting the
+  game. No log means the mod loader is not running: `dwmapi.dll` must sit next to
+  `QueensDomain-Win64-Shipping.exe` (not in a second `Win64` folder inside `Win64`), and Linux needs the DLL
+  override.
+- **"Save at a Crystal Monument in this slot first".** Rest and save at a Crystal Monument once in that slot.
+- **My new hotkey does nothing.** Look for `[QDQuickSave] config.ini:` in `ue4ss/UE4SS.log`; it names the line the
+  mod could not read. Restart the game after every change to `config.ini`.
+- **No message on screen.** Every message is also written to `ue4ss/UE4SS.log`, in lines starting with
+  `[QDQuickSave]`.
+- **It stopped working after a game update.** Install the newest release. If that does not help, please
+  [open an issue](https://github.com/derlocke-ng/queens-maiden-save-mod/issues) and attach `ue4ss/UE4SS.log`.
 
 ## Safety
 
 - The mod never writes your normal saves (`World<N>.sav`, `World<N>_backup.sav`), your settings (`System0.sav`) or
-  challenge progress.
-- It only writes `QuickSave_World<N>.sav` (+ `.prev`) and, when you load a quicksave, the game's own temporary
-  suspend files `World<N>_Suspend_0/1.sav` (which the game itself rewrites every two minutes and deletes when you quit).
+  your challenge progress.
+- It only writes `QuickSave_World<N>.sav` (and `.prev`) and, when you load a quicksave, the game's own temporary
+  suspend files `World<N>_Suspend_0/1.sav`, which the game rewrites every two minutes and deletes when you quit.
 - Still a good habit before trying any mod: copy your save folder somewhere safe
   (`%LOCALAPPDATA%\QueensDomain\Saved`).
 
 ## Tested with
 
-- Queens Domain **1.01.07** (build 13464, Unreal Engine 4.27.2)
-- UE4SS experimental build **e84db30c** (the one included in the `-with-UE4SS` zip)
-- Linux (Fedora Silverblue) with Bottles and Steam. Windows works too.
-- May work with other mods and UE4SS versions.
+- Queen's Domain **1.01.07** (Unreal Engine 4.27.2)
+- UE4SS **v4.0.0**, the build included in the `-with-UE4SS` zip
+- Linux (Fedora Silverblue) with Steam and Bottles, and Windows 11
+- Other mods and other UE4SS versions may work.
 
 ## For developers
 
@@ -117,14 +172,18 @@ python3 tools/build_release.py           # builds dist/*.zip for the version in 
 ```
 
 **Releasing:** change the version in `VERSION` (e.g. `1.0.0` → `1.0.1`) and push to `main`. The *Release* workflow
-then builds both zips, creates the tag `v1.0.1` and publishes the GitHub Release (nothing happens if the tag exists).
+then builds both zips, creates the tag `v1.0.1` and publishes the GitHub Release. Nothing happens if the tag exists.
 
-- Mod source: `mods/QDQuickSave/Scripts/main.lua`. `mods/QuickSaveProbe` is a logging-only research tool (not shipped).
-- The bundled UE4SS build is pinned in `packaging/ue4ss.lock.json` (URL + SHA-256).
+- Mod source: `mods/QDQuickSave/Scripts/main.lua`; default hotkeys: `mods/QDQuickSave/config.ini`.
+- `mods/QuickSaveProbe` is a logging-only research tool and is not shipped.
+- The bundled UE4SS build is pinned in `packaging/ue4ss.lock.json` (URL and SHA-256).
+- Steam guide text: `media/steam-guide.txt`; its images come from `tools/make_steam_images.py`.
 
 ## Credits & licence
 
 - QDQuickSave is released under the [MIT licence](LICENSE).
-- [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS) – the mod loader (MIT licence, included in the bundle as `ue4ss/LICENSE`).
-- Queens Domain by Freshly Baked Games. This project contains no game files.
-- Thanks to @bahcall (Steam) for the fix for versions later than 1.01.06
+- [UE4SS](https://github.com/UE4SS-RE/RE-UE4SS), the mod loader (MIT licence, included in the bundle as
+  `ue4ss/LICENSE`).
+- Queen's Domain by Freshly Baked Games. This project contains no game files.
+- Thanks to @bahcall (Steam) for the fix for game versions after 1.01.06.
+- [Steam guide](https://steamcommunity.com/sharedfiles/filedetails/?id=3831364891)

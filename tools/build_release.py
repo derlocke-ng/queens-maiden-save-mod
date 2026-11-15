@@ -81,13 +81,16 @@ def mod_files(version):
 
 def readme_txt(version, bundled):
     lines = [
-        f"QDQuickSave {version} - quicksave / quickload for Queens Domain",
+        f"QDQuickSave {version} - quicksave / quickload for Queen's Domain",
         "",
         "Extract this zip into the game folder: the folder that contains QueensDomain.exe.",
         "Then follow README.md on the project page for the remaining step on Linux/Steam Deck (one DLL override).",
         "",
-        "F5 = quicksave (in game, after your first save at a monolith)",
+        "F5 = quicksave (in game, after your first save at a Crystal Monument)",
         "F9 twice = load the quicksave (in game or on the death screen)",
+        "",
+        "To change the keys, edit QueensDomain/Binaries/Win64/ue4ss/Mods/QDQuickSave/config.ini and restart the game.",
+        "Updating replaces that file: keep a copy if you changed it.",
         "",
         "Project page: https://github.com/derlocke-ng/queens-maiden-save-mod",
         "QDQuickSave is MIT licensed (QDQuickSave-LICENSE.txt).",

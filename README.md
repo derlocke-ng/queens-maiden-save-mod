@@ -5,7 +5,7 @@
 Press **F5** to quicksave anywhere, press **F9 twice** to jump back to it, even from the death screen.
 
 This mod uses a hidden "suspend save" built into the game: a save it quietly writes every two minutes and resumes
-automatically when you load the slot (its original purpose is unknown – the game itself never mentions it). A
+automatically when you load the slot (its original purpose is a crash protection – the game itself never mentions it). A
 quicksave is a copy of that save, and loading one uses the game's own resume. **Your normal
 saves are never touched.**
 
@@ -105,9 +105,10 @@ Download **`QDQuickSave-<version>.zip`** (mod only) and extract it into the game
 
 ## Tested with
 
-- Queens Domain **1.01.00** (build 13464, Unreal Engine 4.27.2)
+- Queens Domain **1.01.07** (build 13464, Unreal Engine 4.27.2)
 - UE4SS experimental build **e84db30c** (the one included in the `-with-UE4SS` zip)
-- Linux (Fedora Silverblue) with Bottles. Windows itself has not been tested yet – reports welcome.
+- Linux (Fedora Silverblue) with Bottles and Steam. Windows works too.
+- May work with other mods and UE4SS versions.
 
 ## For developers
 

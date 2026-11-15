@@ -65,7 +65,7 @@ jobs:
           - New to mods? Download **QDQuickSave-with-UE4SS.zip** (includes UE4SS, the mod loader).
           - Already using UE4SS? Download **QDQuickSave.zip** (the mod only).
 
-          Extract into the game folder (the one with `QueensDomain.exe`). Linux / Steam Deck need one extra step:
+          Extract into the game folder (the one with `QueensDomain.exe`). Linux needs one extra step:
           see the [README](https://github.com/${{ github.repository }}#readme).
 
           The versioned files are identical copies of the two above.

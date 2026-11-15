@@ -1,4 +1,4 @@
--- QDQuickSave for Queens Domain (UE 4.27, UE4SS experimental).
+-- QDQuickSave for Queen's Domain (UE 4.27, UE4SS).
 --
 -- Built on the game's own hidden suspend save (written every 120 s and resumed when the slot is loaded):
 -- The two hotkeys are read from config.ini in the mod folder (next to Scripts/); the defaults are F5 and F9:
@@ -232,8 +232,8 @@ local function getPawn()
 end
 
 -- True when an instance of className is actually on screen. Some game menus stay in the viewport after closing,
--- only hidden or faded out (v9 test: F5 kept saying "close the menu first" after leaving a monolith), so being
--- in the viewport alone is not enough.
+-- only hidden or faded out (v9 test: F5 kept saying "close the menu first" after leaving a Crystal Monument),
+-- so being in the viewport alone is not enough.
 local function anyInViewport(className)
     for _, w in ipairs(FindAllOf(className) or {}) do
         if w:IsValid()
@@ -340,7 +340,8 @@ end
 local function quickSavePath(slot) return siblingPath(slot, "QuickSave_World" .. slot .. ".sav") end
 
 -- The title treats a slot without World<N>.sav as empty and starts a new game, discarding armed suspend files
--- (test T9), so quicksaving and quickloading require a regular (monolith) save in the slot.
+-- (test T9), so quicksaving and quickloading require a regular (Crystal Monument) save in the
+-- slot.
 local function hasWorldSave(slot)
     local p = siblingPath(slot, "World" .. slot .. ".sav")
     return p ~= nil and isGvas(readFile(p))
@@ -466,22 +467,22 @@ end
 ---------------------------------------------------------------- unsupported game states
 
 -- Game screens that do not pause the game, so IsGamePaused alone does not catch them (v8 test: F5 was accepted
--- at a monolith). The monolith interaction itself is tracked from FS_PlayerChar_C:OpenSaveMenu to ClosedSaveMenu,
--- which also covers the rest animation before the menu appears.
+-- at a Crystal Monument). The Crystal Monument interaction itself is tracked from FS_PlayerChar_C:OpenSaveMenu to
+-- ClosedSaveMenu, which also covers the rest animation before the menu appears.
 local NON_PAUSING_MENUS = { "SaveMenu_C", "SaveTeleportUI_C", "ShopMenu_C", "KeyUseMenu_C", "GameplayModalMenu_C",
                             "DialogueScreen_C" }
-local monolithPawnAddr = nil     -- set while that pawn is in a monolith interaction
-local monolithSince = 0
-local MONOLITH_STALE_S = 20      -- ignore the flag after this long without a save/teleport menu on screen,
+local monumentPawnAddr = nil     -- set while that pawn is in a Crystal Monument interaction
+local monumentSince = 0
+local MONUMENT_STALE_S = 20      -- ignore the flag after this long without a save/teleport menu on screen,
                                  -- in case the game ever skips ClosedSaveMenu
 
 local function onOpenSaveMenu(self)
-    monolithPawnAddr = safe(function() return self:get():GetAddress() end)
-    monolithSince = os.time()
+    monumentPawnAddr = safe(function() return self:get():GetAddress() end)
+    monumentSince = os.time()
 end
 
 local function onClosedSaveMenu(self)
-    monolithPawnAddr = nil
+    monumentPawnAddr = nil
 end
 
 -- FS_PlayerChar_C:DeathAnim starts the death animation, seconds before the death screen; the reload spawns a new pawn.
@@ -495,12 +496,13 @@ local function isDying(pawn)
     return dyingPawnAddr ~= nil and pawn ~= nil and safe(function() return pawn:GetAddress() end) == dyingPawnAddr
 end
 
--- Returns a short reason when the player is in a monolith interaction or a non-pausing menu, else nil.
+-- Returns a short reason when the player is in a Crystal Monument interaction or a non-pausing menu, else
+-- nil.
 local function busyReason(pawn)
-    if monolithPawnAddr ~= nil and pawn and safe(function() return pawn:GetAddress() end) == monolithPawnAddr then
+    if monumentPawnAddr ~= nil and pawn and safe(function() return pawn:GetAddress() end) == monumentPawnAddr then
         local menuOpen = anyInViewport("SaveMenu_C") or anyInViewport("SaveTeleportUI_C")
-        if menuOpen or os.time() - monolithSince < MONOLITH_STALE_S then return "not while at a Crystal Monument" end
-        monolithPawnAddr = nil
+        if menuOpen or os.time() - monumentSince < MONUMENT_STALE_S then return "not while at a Crystal Monument" end
+        monumentPawnAddr = nil
     end
     for _, cls in ipairs(NON_PAUSING_MENUS) do
         if anyInViewport(cls) then
@@ -804,7 +806,7 @@ local function quickLoadInGame(gi)
     log(string.format("QUICKLOAD: active save IsSuspendSave=%s, opening level %s", tostring(isSuspend), level))
     if isSuspend ~= true then
         pendingLoadedSlot = nil
-        log("QUICKLOAD WARNING: the game did not pick the armed suspend file; the level loads from the monolith save")
+        log("QUICKLOAD WARNING: the game did not pick the armed suspend file; the level loads from the Crystal Monument save")
     end
     local gs = StaticFindObject("/Script/Engine.Default__GameplayStatics")
     local opened = gs ~= nil and gs:IsValid() and pcall(function() gs:OpenLevel(gi, FName(level), true, "") end)

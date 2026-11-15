@@ -11,7 +11,8 @@ Both keys can be changed.
 - **Uses the game's own save code.** The game quietly writes a "suspend save" every two minutes and resumes it
   when you load the slot (crash protection it never mentions). A quicksave is a copy of that save, and loading one
   is the game's own resume.
-- Windows, Linux and Steam Deck.
+- Runs on Windows and on Linux (Steam with Proton, Bottles). The Steam Deck is untested, see
+  [Steam Deck](#steam-deck).
 
 > Unofficial fan mod. Not made or supported by Freshly Baked Games.
 
@@ -32,11 +33,11 @@ Both keys can be changed.
 3. Extract the zip **into that folder**, keeping the folder structure.
 4. Check that `QueensDomain\Binaries\Win64\dwmapi.dll` now exists, then start the game.
 
-### Linux, Steam Deck, Proton, Bottles, Lutris
+### Linux (Steam with Proton, Bottles, Lutris)
 
 Do the Windows steps, then tell Wine to load the mod loader (once):
 
-- **Steam / Steam Deck (Proton):** right-click the game → **Properties** → **Launch options**, paste:
+- **Steam (Proton):** right-click the game → **Properties** → **Launch options**, paste:
   ```
   WINEDLLOVERRIDES="dwmapi=n,b" %command%
   ```
@@ -44,6 +45,16 @@ Do the Windows steps, then tell Wine to load the mod loader (once):
 - **Lutris:** right-click the game → **Configure** → **Runner options** → **DLL overrides** → add `dwmapi` = `n,b`.
 
 Without this step the mod does not load, because Wine uses its own `dwmapi.dll` instead of the mod loader's.
+
+### Steam Deck
+
+Not tested. The Deck runs the game through Proton like any Linux PC, so the Linux steps should apply, but nobody
+has confirmed it yet.
+
+The Deck has no F5 or F9. In the game's controller layout (Steam Input), assign two spare buttons, for example
+the back grips, to the keyboard keys F5 and F9, or to the keys you set in `config.ini`.
+
+If you try it, please [report](https://github.com/derlocke-ng/queens-maiden-save-mod/issues) whether it works.
 
 ### Already using UE4SS?
 
@@ -163,6 +174,7 @@ Quicksave files stay in your save folder until you delete them, and are harmless
 - Queen's Domain **1.01.07** (Unreal Engine 4.27.2)
 - UE4SS **v4.0.0**, the build included in the `-with-UE4SS` zip
 - Linux (Fedora Silverblue) with Steam and Bottles, and Windows 11
+- Steam Deck: not tested
 - Other mods and other UE4SS versions may work.
 
 ## For developers

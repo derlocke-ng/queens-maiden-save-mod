@@ -70,7 +70,7 @@ def square(path, s=512):
     img = background(w, h)
     d = ImageDraw.Draw(img)
     centered(d, w / 2, h * 0.075, "QuickSave", font(BOLD, 74), TEXT)
-    centered(d, w / 2, h * 0.245, "for Queens Domain", font(REG, 28), MUTED)
+    centered(d, w / 2, h * 0.245, "for Queen's Domain", font(REG, 28), MUTED)
     k = w * 0.30
     gap = w * 0.08
     x0 = (w - 2 * k - gap) / 2
@@ -95,7 +95,7 @@ def banner(path, w0=1280, h0=720):
     l, t, r, b = d.textbbox((0, 0), "QuickSave", font=tf)
     d.text((lx - l, h * 0.26 - t), "QuickSave", font=tf, fill=TEXT)
     sf = font(REG, 44)
-    d.text((lx, h * 0.26 + (b - t) + h * 0.05), "for Queens Domain", font=sf, fill=MUTED)
+    d.text((lx, h * 0.26 + (b - t) + h * 0.05), "for Queen's Domain", font=sf, fill=MUTED)
     bf = font(REG, 34)
     lines = ["F5  quicksave anywhere", "F9 ×2  load it, even after death", "your normal saves stay untouched"]
     y = h * 0.60

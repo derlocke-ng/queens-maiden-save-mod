@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Snapshot or diff the Queens Domain save directory. Never writes to it.
+"""Snapshot or diff the Queen's Domain save directory. Never writes to it.
 
   snapshot_saves.py snap  <name>          record names, sizes, mtimes, sha256; copy SaveGames files
   snapshot_saves.py diff  <old> <new>     compare two recorded snapshots

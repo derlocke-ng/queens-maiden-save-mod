@@ -84,7 +84,7 @@ def readme_txt(version, bundled):
         f"QDQuickSave {version} - quicksave / quickload for Queen's Domain",
         "",
         "Extract this zip into the game folder: the folder that contains QueensDomain.exe.",
-        "Then follow README.md on the project page for the remaining step on Linux/Steam Deck (one DLL override).",
+        "Then follow README.md on the project page for the remaining step on Linux (one DLL override).",
         "",
         "F5 = quicksave (in game, after your first save at a Crystal Monument)",
         "F9 twice = load the quicksave (in game or on the death screen)",

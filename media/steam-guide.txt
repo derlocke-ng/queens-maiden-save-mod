@@ -9,7 +9,7 @@ Queen's Domain Quicksave Mod (F5 / F9, custom hotkeys)
 
 ##### DESCRIPTION (the short text under the title)
 
-QDQuickSave adds quicksave and quickload to Queen's Domain. Press F5 to save anywhere, press F9 twice to go back to it, even from the death screen. Both keys can be changed. Your normal saves are never touched. Works on Windows, Linux and Steam Deck.
+QDQuickSave adds quicksave and quickload to Queen's Domain. Press F5 to save anywhere, press F9 twice to go back to it, even from the death screen. Both keys can be changed. Your normal saves are never touched. Works on Windows and Linux.
 
 
 ##### SECTION 1 - title: What it does
@@ -20,7 +20,7 @@ QDQuickSave adds quicksave and quickload to Queen's Domain. Press F5 to save any
 [*][b]Your normal saves are never touched.[/b] A quicksave is a separate file next to them.
 [*]One quicksave per save slot. It restores your position, health, inventory and progress.
 [*]Both keys can be changed in a small text file.
-[*]Windows, Linux and Steam Deck.
+[*]Runs on Windows and Linux. The Steam Deck is untested.
 [/list]
 
 The game quietly writes a hidden "suspend save" every two minutes and resumes it when you load the slot. A quicksave is a copy of that save, so loading one is the game's own resume and nothing is patched in the game files.
@@ -43,17 +43,19 @@ If you end up with a [b]Win64[/b] folder inside [b]Win64[/b], the zip was extrac
 Already using UE4SS? Take the mod-only [url=https://github.com/derlocke-ng/queens-maiden-save-mod/releases/latest/download/QDQuickSave.zip]QDQuickSave.zip[/url] instead.
 
 
-##### SECTION 3 - title: Install (Linux and Steam Deck)
+##### SECTION 3 - title: Install (Linux)
 
 Do the Windows steps above, then one more, once:
 
-[b]Steam / Steam Deck (Proton):[/b] right-click the game → [b]Properties[/b] → [b]Launch options[/b] and paste:
+[b]Steam (Proton):[/b] right-click the game → [b]Properties[/b] → [b]Launch options[/b] and paste:
 [code]WINEDLLOVERRIDES="dwmapi=n,b" %command%[/code]
 
 [b]Bottles:[/b] bottle → Settings → DLL overrides → add [b]dwmapi[/b], set to "Native, then Builtin".
 [b]Lutris:[/b] Configure → Runner options → DLL overrides → add [b]dwmapi[/b] = [b]n,b[/b].
 
 Without this the mod does not load.
+
+[b]Steam Deck:[/b] not tested. It runs the game through Proton like any Linux PC, so the steps above should apply. The Deck has no F5 or F9: in the game's controller layout (Steam Input), assign two spare buttons, for example the back grips, to the keyboard keys F5 and F9. If you try it, please leave a comment and say whether it works.
 
 
 ##### SECTION 4 - title: How to use

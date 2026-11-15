@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Copy the complete Queens Domain "Saved" directory to a timestamped backup
+# Copy the complete Queen's Domain "Saved" directory to a timestamped backup
 # and verify every file by SHA-256. Read-only with respect to the source.
 # Refuses to run while the game (or its wineserver) is running.
 set -euo pipefail

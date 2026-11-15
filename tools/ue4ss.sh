@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Stage, install and remove UE4SS for Queens Domain, recording every file added.
+# Stage, install and remove UE4SS for Queen's Domain, recording every file added.
 #
 #   ue4ss.sh stage <zip> <sha256>   verify the archive hash and extract it into staging/ (game untouched)
 #   ue4ss.sh apply                  copy staging/ into the game's Win64 dir (no overwrite),

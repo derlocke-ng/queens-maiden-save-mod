@@ -134,6 +134,9 @@ Check that [b]QueensDomain\Binaries\Win64\ue4ss\UE4SS.log[/b] exists after start
 [b]"Save at a Crystal Monument in this slot first"[/b]
 Rest and save at a Crystal Monument once in that slot.
 
+[b]"The game blocks saving here"[/b]
+Boss arenas and some other places block saving while you are in them. Leave the area, or win or lose the fight. Since 1.1.1 this no longer sticks for the rest of the session after dying or quitting inside a boss arena.
+
 [b]My new hotkey does nothing.[/b]
 Restart the game after changing config.ini. If it still does not work, UE4SS.log has a line starting with "[QDQuickSave] config.ini:" that names the problem.
 
@@ -148,6 +151,7 @@ Install the newest version of the mod. If that does not help, leave a comment he
 [*]Bug reports: [url=https://github.com/derlocke-ng/queens-maiden-save-mod/issues]GitHub issues[/url] or the comments below
 [*]Mod loader: [url=https://github.com/UE4SS-RE/RE-UE4SS]UE4SS[/url] (included in the download)
 [*]Thanks to bahcall for the fix for game versions after 1.01.06
+[*]Thanks to jbrsimpson for the boss arena fix
 [/list]
 
 Tested with Queen's Domain 1.01.07 on Windows 11 and on Linux (Steam and Bottles). MIT licence.

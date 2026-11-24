@@ -256,48 +256,19 @@ end
 
 ---------------------------------------------------------------- death duck
 --
--- When the death animation starts the game pushes the DeathSoundsDuck sound mix (quieter effects); its own Continue
--- pops it before reloading. Sound mix modifiers live in the audio device and survive OpenLevel, so a quickload made
--- while it is pushed (v1.0.1: F9 during the death animation, before the death screen) kept the effects quieter until
--- a restart (QDAudioTrace). Its pushes and pops are counted here so a quickload or a finished reload can pop it.
--- Only this mix is touched: it is the only one the game pushed in every trace.
+-- About a second after the death animation starts the game pushes the DeathSoundsDuck sound mix (quieter effects);
+-- its own Continue pops it before reloading. Sound mix modifiers live in the audio device and survive OpenLevel, so a
+-- quickload made while it is pushed kept the effects quieter until a restart (QDAudioTrace, v1.0.1).
+-- Popping a mix that is not pushed does nothing, so it is simply popped whenever a death may have pushed it.
+-- (v1.0.2 counted pushes with native hooks on GameplayStatics:Push/PopSoundMixModifier; UE4SS could not resolve some
+-- calls through those hooks and the game crashed when opening the video options. No native hooks any more.)
 
-local deathDuckPushes = 0
-local duckHooksOk = false
-
-do
-    local function count(delta)
-        return function(self, ctx, mix)
-            local m = safe(function() return mix:get() end)
-            local full = m and safe(function() return m:GetFullName() end) or ""
-            if full:gsub("^%S+%s+", "") == DEATH_DUCK_MIX then deathDuckPushes = math.max(0, deathDuckPushes + delta) end
-        end
-    end
-    duckHooksOk = pcall(RegisterHook, "/Script/Engine.GameplayStatics:PushSoundMixModifier", count(1))
-        and pcall(RegisterHook, "/Script/Engine.GameplayStatics:PopSoundMixModifier", count(-1))
-    if duckHooksOk then
-        pcall(RegisterHook, "/Script/Engine.GameplayStatics:ClearSoundMixModifiers", function() deathDuckPushes = 0 end)
-    else
-        log("could not hook PushSoundMixModifier/PopSoundMixModifier; the death duck is popped once per death-screen quickload")
-    end
-end
-
--- Pop the death duck as often as it is still pushed (once, unconditionally, when the hooks are missing and force is
--- set). Returns the number of pops.
-local function popDeathDuck(gi, force)
-    local n = duckHooksOk and deathDuckPushes or (force and 1 or 0)
-    if n == 0 then return 0 end
+local function popDeathDuck(gi)
     local mix = StaticFindObject(DEATH_DUCK_MIX)
     local gs = StaticFindObject("/Script/Engine.Default__GameplayStatics")
-    local popped = 0
-    if mix ~= nil and mix:IsValid() and gs ~= nil and gs:IsValid() then
-        for _ = 1, n do
-            if pcall(function() gs:PopSoundMixModifier(gi, mix) end) then popped = popped + 1 end
-        end
-    end
-    deathDuckPushes = 0
-    log(string.format("PopSoundMixModifier(DeathSoundsDuck): %d of %d done", popped, n))
-    return popped
+    local popped = mix ~= nil and mix:IsValid() and gs ~= nil and gs:IsValid()
+        and pcall(function() gs:PopSoundMixModifier(gi, mix) end)
+    log("PopSoundMixModifier(DeathSoundsDuck) " .. (popped and "done" or "not possible"))
 end
 
 local function validSlot(n)
@@ -318,17 +289,52 @@ local function activeSlotIndex(gi)
 end
 
 -- Windows path of World<N>_Suspend_<k>.sav, from the game's own BlueprintUtils:GetSaveSlotName.
+-- Its parameters: build 13464 (SlotIndex, bForceDemoName, bBackup, bSuspend, SuspendIndex); build 13565 added
+-- BackupIndex (numbered World<N>_backup_<i>.sav files), and calling with the old argument count fails. Each known
+-- argument list is tried until one returns the expected file name; the one that works is remembered.
+local SLOT_NAME_CALLS = {
+    function(u, slot, k) return u:GetSaveSlotName(slot, false, false, true, k, 0) end,   -- 13565: ..., SuspendIndex, BackupIndex
+    function(u, slot, k) return u:GetSaveSlotName(slot, false, false, true, 0, k) end,   -- in case BackupIndex comes first
+    function(u, slot, k) return u:GetSaveSlotName(slot, false, false, true, k) end,      -- 13464
+}
+local slotNameCall = nil
+local slotNameErrorsLogged = false
+
 local function suspendPath(slot, k)
     local utils = StaticFindObject("/Script/QueensDomain.Default__BlueprintUtils")
-    if utils == nil or not utils:IsValid() then return nil end
-    local name = str(safe(function() return utils:GetSaveSlotName(slot, false, false, true, k, false) end))
-    if not name then return nil end
-    local path = name:gsub("^FULLPATH:", "")
-    if not path:match("World" .. slot .. "_Suspend_" .. k .. "%.sav$") then
-        log("unexpected suspend slot name: " .. name)
+    if utils == nil or not utils:IsValid() then
+        log("BlueprintUtils not found")
         return nil
     end
-    return path
+    local expected = "World" .. slot .. "_Suspend_" .. k .. "%.sav$"
+    local function try(call)
+        local ok, res = pcall(call, utils, slot, k)
+        if not ok then return nil, "error: " .. tostring(res) end
+        local name = str(res)
+        if not name then return nil, "returned no string" end
+        local path = name:gsub("^FULLPATH:", "")
+        if not path:match(expected) then return nil, "unexpected name " .. name end
+        return path
+    end
+    if slotNameCall then
+        local path = try(slotNameCall)
+        if path then return path end
+    end
+    local reasons = {}
+    for i, call in ipairs(SLOT_NAME_CALLS) do
+        local path, why = try(call)
+        if path then
+            if slotNameCall ~= call then log("GetSaveSlotName: using argument list #" .. i) end
+            slotNameCall = call
+            return path
+        end
+        reasons[#reasons + 1] = "#" .. i .. " " .. why
+    end
+    if not slotNameErrorsLogged then
+        slotNameErrorsLogged = true
+        log("GetSaveSlotName failed for slot " .. slot .. ", index " .. k .. ": " .. table.concat(reasons, "; "))
+    end
+    return nil
 end
 
 local function siblingPath(slot, fileName)
@@ -344,7 +350,12 @@ local function quickSavePath(slot) return siblingPath(slot, "QuickSave_World" ..
 -- slot.
 local function hasWorldSave(slot)
     local p = siblingPath(slot, "World" .. slot .. ".sav")
-    return p ~= nil and isGvas(readFile(p))
+    if p == nil then return false end
+    if not isGvas(readFile(p)) then
+        log("no readable save at " .. p)
+        return false
+    end
+    return true
 end
 
 -- Returns the quicksave bytes for slot, or nil and a short reason.
@@ -518,6 +529,39 @@ end
 local saving = false
 local requestCounter = 0
 
+-- The game's own suspend-save block counter, FS_GameInstance_C.SuspendIsBlocked. Places such as boss arenas add to
+-- it on entry and subtract on exit, but the game instance lives until the game is closed, so dying or quitting inside
+-- such a place leaves the counter off for the rest of the session (seen: 0, -1, -3 on 1.01.00; stuck positive after a
+-- boss arena on 1.01.06, which refused F5 everywhere until a restart). A load never places the player in a blocked
+-- area, so the value shortly after each load is the "not blocked" level; only a value above it means blocked. A lower
+-- value seen later is also not blocked and becomes the new level.
+local blockBaseline = 0
+
+local function readBlockCounter(gi)
+    local v = safe(function() return gi.SuspendIsBlocked end)
+    if type(v) == "number" then return v end
+    return nil
+end
+
+local function rebaseBlockCounter()
+    local gi = getGameInstance()
+    local v = gi and readBlockCounter(gi)
+    if v == nil then return end
+    if v ~= blockBaseline then log(string.format("SuspendIsBlocked is %d after loading (was %d)", v, blockBaseline)) end
+    blockBaseline = v
+end
+
+local function isSaveBlocked(gi)
+    local v = readBlockCounter(gi)
+    if v == nil then return false end
+    if v < blockBaseline then blockBaseline = v end
+    if v > blockBaseline then
+        log(string.format("SuspendIsBlocked=%d, unblocked level %d", v, blockBaseline))
+        return true
+    end
+    return false
+end
+
 -- Returns gi, slot on success; nil, short reason when quicksaving is not supported right now.
 local function checkCanQuickSave()
     local gi = getGameInstance()
@@ -532,9 +576,7 @@ local function checkCanQuickSave()
     if isPaused(pawn) then return nil, "close the menu first" end
     local busy = busyReason(pawn)
     if busy then return nil, busy end
-    -- The game's own block counter. Observed values: 0, -1, -3; only positive values are treated as blocked.
-    local blocked = safe(function() return gi.SuspendIsBlocked end) or 0
-    if blocked > 0 then return nil, "the game blocks saving here" end
+    if isSaveBlocked(gi) then return nil, "the game blocks saving here" end
     if safe(function() return gi.SuspendSaveCurrentlyWriting end) == true then return nil, "game is saving, try again" end
     if saving then return nil, "quicksave already in progress" end
     local slot = activeSlotIndex(gi)
@@ -566,8 +608,9 @@ local function finishQuickSave(id, slot, before, waited)
         if not src then
             if waited >= SAVE_TIMEOUT_MS then
                 saving = false
-                log(string.format("QUICKSAVE #%d FAILED: no suspend file of slot %d changed within %d s",
-                    id, slot, SAVE_TIMEOUT_MS // 1000))
+                log(string.format("QUICKSAVE #%d FAILED: no suspend file of slot %d changed within %d s"
+                    .. " (SuspendIsBlocked=%s, unblocked level %d)", id, slot, SAVE_TIMEOUT_MS // 1000,
+                    tostring(gi and readBlockCounter(gi)), blockBaseline))
                 showMessage("Quicksave failed")
                 return
             end
@@ -642,6 +685,7 @@ end
 
 -- FS_PlayerChar_C:RestoreSuspend runs once the game has placed the player at the suspend position (traces v6).
 local function onRestoreSuspend(self)
+    ExecuteWithDelay(2000, function() ExecuteInGameThread(rebaseBlockCounter) end)
     local slot = pendingLoadedSlot
     if slot == nil then return end
     local gi = getGameInstance()
@@ -652,12 +696,15 @@ local function onRestoreSuspend(self)
     end)
 end
 
--- FS_PlayerChar_C:RestoreToSavePoint runs when any load (game's or ours) has finished. The death duck still pushed
--- at that point can only be a leak, whichever path caused it.
+-- FS_PlayerChar_C:RestoreToSavePoint runs when any load (game's or ours) has finished. After a death, pop the duck once
+-- more: a quickload in the first second of the death animation runs before the game pushes it.
 local function onRestoreToSavePoint(self)
+    -- Let the load settle, then take the block counter's value as the "not blocked" level (see isSaveBlocked).
+    ExecuteWithDelay(2000, function() ExecuteInGameThread(rebaseBlockCounter) end)
+    local diedBefore = dyingPawnAddr ~= nil
     dyingPawnAddr = nil   -- a new pawn may reuse the old one's address
     local gi = getGameInstance()
-    if gi and popDeathDuck(gi, false) > 0 then log("after reload: removed a leftover death duck") end
+    if gi and diedBefore then popDeathDuck(gi) end
 end
 
 local function onDeathButtons(self)
@@ -781,7 +828,7 @@ local function quickLoadInGame(gi)
         dead and " (death screen)" or dying and " (death animation)" or ""))
     pendingLoadedSlot = slot
     -- Like the game's own Continue, remove the death duck before reloading.
-    popDeathDuck(gi, dead or dying)
+    if dead or dying then popDeathDuck(gi) end
     -- The same two calls the title screen makes when a slot is selected (observed with a logging probe):
     --   FS_GameInstance_C:ForceLoadNewSlot(false, 0)  loads the active slot from disk (suspend files preferred) and
     --                                                 makes it the active save;

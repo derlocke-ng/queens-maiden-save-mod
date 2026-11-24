@@ -153,6 +153,9 @@ Quicksave files stay in your save folder until you delete them, and are harmless
   `QueensDomain-Win64-Shipping.exe` (not in a second `Win64` folder inside `Win64`), and Linux needs the DLL
   override.
 - **"Save at a Crystal Monument in this slot first".** Rest and save at a Crystal Monument once in that slot.
+- **"The game blocks saving here".** Boss arenas and some other places block saving while you are in them.
+  Leave the area, or win or lose the fight. Since 1.1.1 this no longer sticks for the rest of the session after
+  dying or quitting inside a boss arena.
 - **My new hotkey does nothing.** Look for `[QDQuickSave] config.ini:` in `ue4ss/UE4SS.log`; it names the line the
   mod could not read. Restart the game after every change to `config.ini`.
 - **No message on screen.** Every message is also written to `ue4ss/UE4SS.log`, in lines starting with
@@ -198,4 +201,6 @@ then builds both zips, creates the tag `v1.0.1` and publishes the GitHub Release
   `ue4ss/LICENSE`).
 - Queen's Domain by Freshly Baked Games. This project contains no game files.
 - Thanks to @bahcall (Steam) for the fix for game versions after 1.01.06.
+- Thanks to [jbrsimpson](https://github.com/jbrsimpson/queens-domain-quicksave-mod) for the boss arena fix and
+  the GetSaveSlotName fallback for game build 13565.
 - [Steam guide](https://steamcommunity.com/sharedfiles/filedetails/?id=3831364891)

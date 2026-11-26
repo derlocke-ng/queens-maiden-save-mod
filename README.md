@@ -191,6 +191,8 @@ then builds both zips, creates the tag `v1.0.1` and publishes the GitHub Release
 
 - Mod source: `mods/QDQuickSave/Scripts/main.lua`; default hotkeys: `mods/QDQuickSave/config.ini`.
 - `mods/QuickSaveProbe` is a logging-only research tool and is not shipped.
+- `mods/QDBlockTest` (not shipped) recreates the boss arena save block anywhere: Ctrl+F10 / Ctrl+F11 call the
+  game's `BlockSuspendSaves` / `UnBlockSuspendSaves`, Ctrl+F12 logs the counter.
 - The bundled UE4SS build is pinned in `packaging/ue4ss.lock.json` (URL and SHA-256).
 - Steam guide text: `media/steam-guide.txt`; its images come from `tools/make_steam_images.py`.
 
